@@ -69,6 +69,7 @@ class TLDetector(object):
     def traffic_cb(self, msg):
         self.lights = msg.lights
         #rospy.logwarn("lights:{0}".format(self.lights))
+        '''
         light_wp, state = self.process_traffic_lights()
         if self.state != state:
             self.state_count = 0
@@ -81,6 +82,7 @@ class TLDetector(object):
         else:
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
         self.state_count += 1
+        '''
 
     def image_cb(self, msg):
         """Identifies red lights in the incoming camera image and publishes the index
@@ -138,9 +140,9 @@ class TLDetector(object):
 
         """
         #for testing, just return light state
-        return light.state
+        #return light.state
 
-        '''
+        
         if(not self.has_image):
             self.prev_light_loc = None
             return False
@@ -149,7 +151,7 @@ class TLDetector(object):
 
         #Get classification
         return self.light_classifier.get_classification(cv_image)
-        '''
+        
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
