@@ -1,74 +1,112 @@
+[//]: # (Image References)
+[simulator]: ./doc/simulator.png
+[sim_red_detected]: ./doc/sim_red_detected.png
+[sim_green_detected]: ./doc/sim_green_detected.png
+
+
 This is the project repo for the final project of the Udacity Self-Driving Car Nanodegree: Programming a Real Self-Driving Car. For more information about the project, see the project introduction [here](https://classroom.udacity.com/nanodegrees/nd013/parts/6047fe34-d93c-4f50-8336-b70ef10cb4b2/modules/e1a23b06-329a-4684-a717-ad476f0d8dff/lessons/462c933d-9f24-42d3-8bdc-a08a5fc866e4/concepts/5ab4b122-83e6-436d-850f-9f4d26627fd9).
 
-Please use **one** of the two installation options, either native **or** docker installation.
+# Team Member
 
-### Native Installation
+Name 				| Udacity Account Email
+---------------- | ---------------------
+hesham abdelfattah | hesham.abdelfattah81@gmail.com
+Bokai Chen       |stevenbokai@hotmail.com
+Naveen Jagadish    |naveen.lsu@gmail.com
+Frederic Liu       |liufubo4213@126.com
 
-* Be sure that your workstation is running Ubuntu 16.04 Xenial Xerus or Ubuntu 14.04 Trusty Tahir. [Ubuntu downloads can be found here](https://www.ubuntu.com/download/desktop).
-* If using a Virtual Machine to install Ubuntu, use the following configuration as minimum:
-  * 2 CPU
-  * 2 GB system memory
-  * 25 GB of free hard drive space
 
-  The Udacity provided virtual machine has ROS and Dataspeed DBW already installed, so you can skip the next two steps if you are using this.
 
-* Follow these instructions to install ROS
-  * [ROS Kinetic](http://wiki.ros.org/kinetic/Installation/Ubuntu) if you have Ubuntu 16.04.
-  * [ROS Indigo](http://wiki.ros.org/indigo/Installation/Ubuntu) if you have Ubuntu 14.04.
-* [Dataspeed DBW](https://bitbucket.org/DataspeedInc/dbw_mkz_ros)
-  * Use this option to install the SDK on a workstation that already has ROS installed: [One Line SDK Install (binary)](https://bitbucket.org/DataspeedInc/dbw_mkz_ros/src/81e63fcc335d7b64139d7482017d6a97b405e250/ROS_SETUP.md?fileviewer=file-view-default)
-* Download the [Udacity Simulator](https://github.com/udacity/CarND-Capstone/releases).
 
-### Docker Installation
-[Install Docker](https://docs.docker.com/engine/installation/)
+## Description
 
-Build the docker container
-```bash
-docker build . -t capstone
+
+### Waypoint Updater
+
+This node publishes a fixed number (200 in this implementation) ahead of the vehcile with the correct target velocities. If an upcoming stop light is detected, the velocity of the waypoints will be adjusted and the car decelerates or accelerates depending on the light state.
+
+The implementation mainly follow the classroom's solion, subscribing to /current_pose , /base_waypoints and /traffic_waypoints, using KDTree to get the closest point, and decelate when close to red light. Finally publishes /final_waypoints.
+
+### Drive-By-Wire Node / Twist Controller
+
+#### Drive-By-Wire Node
+
+This node represents a drive by wire controller. It receives /twist_cmd and current velocity, calculates throttle, brake and steering, and finaly published them to vehicle. 
+#### Twist Controller
+
+This controller is responsible for acceleration and steering. The acceleration is calculated via PID controller. Steering is calculated using YawController which simply calculates needed angle to keep needed velocity.
+
+### Traffic Light Detection / Classification
+
+This node is responsible for detecting upcoming traffic lights and classify their states (red, yellow, green).
+
+For the classification model, we take reference of some previous teams of this projects. Finally we choose Tensorflow's [Object Detection API](https://github.com/tensorflow/models/tree/master/research/object_detection) to train the traffic-light classification model, for its easily training and frendly using.
+
+
+Training image dataset could be downloaded [here](https://drive.google.com/file/d/0B-Eiyn-CUQtxdUZWMkFfQzdObUE/view?usp=sharing).
+
+The workflow of training the classification model with Object Detection API is as followings:
+
+#### Install dependencies
+
+```
+sudo apt-get install protobuf-compiler
+sudo pip install pillow
+sudo pip install lxml
+sudo pip install jupyter
+sudo pip install matplotlib
 ```
 
-Run the docker file
-```bash
-docker run -p 4567:4567 -v $PWD:/capstone -v /tmp/log:/root/.ros/ --rm -it capstone
+#### Protobuf Compilation
+
+```
+# From root directory
+protoc object_detection/protos/*.proto --python_out=.
 ```
 
-### Port Forwarding
-To set up port forwarding, please refer to the [instructions from term 2](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/16cf4a78-4fc7-49e1-8621-3450ca938b77)
+#### Add Libraries to PYTHONPATH
 
-### Usage
-
-1. Clone the project repository
-```bash
-git clone https://github.com/udacity/CarND-Capstone.git
+```
+# From root directory
+export PYTHONPATH=$PYTHONPATH:`pwd`:`pwd`/slim
 ```
 
-2. Install python dependencies
-```bash
-cd CarND-Capstone
-pip install -r requirements.txt
-```
-3. Make and run styx
-```bash
-cd ros
-catkin_make
-source devel/setup.sh
-roslaunch launch/styx.launch
-```
-4. Run the simulator
+#### Download SSD MobileNet Model
 
-### Real world testing
-1. Download [training bag](https://s3-us-west-1.amazonaws.com/udacity-selfdrivingcar/traffic_light_bag_file.zip) that was recorded on the Udacity self-driving car.
-2. Unzip the file
-```bash
-unzip traffic_light_bag_file.zip
 ```
-3. Play the bag file
-```bash
-rosbag play -l traffic_light_bag_file/traffic_light_training.bag
+# From root directory
+curl http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2017_11_17.tar.gz | tar -xv -C model/ --strip 1
 ```
-4. Launch your project in site mode
-```bash
-cd CarND-Capstone/ros
-roslaunch launch/site.launch
+
+
+### Creating TFRecord files
+
 ```
-5. Confirm that traffic light detection works on real life images
+python object_detection/dataset_tools/create_pascal_tf_record.py --data_dir=data/sim_training_data/sim_data_capture --output_path=sim_data.record
+```
+
+```
+python object_detection/dataset_tools/create_pascal_tf_record.py --data_dir=data/real_training_data/real_data_capture --output_path=real_data.record
+```
+
+
+## Training
+
+### Trainning on Simulator Data
+
+```
+python object_detection/train.py --pipeline_config_path=config/ssd_mobilenet_v1_coco_sim.config --train_dir=data/sim_training_data/sim_data_capture
+```
+
+
+### Training on  Real Data
+
+```
+python object_detection/train.py --pipeline_config_path=config/ssd_mobilenet_v1_coco_real.config --train_dir=data/real_training_data
+```
+
+
+### Result
+Currently in simulator the algorithm could drive car smoothly along the waypoints, stop at stopline when traffic light is red, and could recover from manual mode.
+
+
