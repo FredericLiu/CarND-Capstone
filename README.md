@@ -11,7 +11,6 @@ This is the project repo for the final project of the Udacity Self-Driving Car N
 Name 				| Udacity Account Email
 ---------------- | ---------------------
 hesham abdelfattah | hesham.abdelfattah81@gmail.com
-Bokai Chen       |stevenbokai@hotmail.com
 Naveen Jagadish    |naveen.lsu@gmail.com
 Frederic Liu       |liufubo4213@126.com
 
